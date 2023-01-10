@@ -221,7 +221,7 @@ class AHPImportance(Resource):
         return ahpDoc['ahp']
 
     def put(self):
-        ahp_object = request.form.get('ahp_object')
+        ahp_object = request.form.get('data')
 
         # example:
         # ahpObj = {
@@ -253,9 +253,9 @@ class AHPImportance(Resource):
         return jsonify({'status': status, "message": message})
 
 
-@app.route('/test')
+@app.route('/verify_token')
 @tokenReq
-def test():
+def verify_token():
     return jsonify('jwt works.')
 
 
@@ -268,8 +268,8 @@ def login():
 
     try:
         data = {}
-        data['email'] = request.form.get('email')
-        data['password'] = request.form.get('password')
+        data['email'] = request.get_json()['email']
+        data['password'] = request.get_json()['password']
         # return jsonify('ge')
         user = db['users'].find_one({"email": f'{data["email"]}'})
 
