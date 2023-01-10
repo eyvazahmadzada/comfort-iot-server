@@ -50,35 +50,46 @@ def tokenReq(f):
 
 
 class ROOMS(Resource):
-    def get(self):
+    def post(self):
 
-        # @TODO: we need to add AHP importance filtering based on user preference
-        # So, just another parameter AHPObj would be enough:
-        # AHPObj: {
-        # 'temperature, humidity': 0.2,
-        # 'temperature', pressure': 3,
-        # ...
+        ahp_object = request.form.get('ahp_object')
+
+        # example:
+        # ahpObj = {
+        #     'temperature, humidity': 0.2,
+        #     'temperature, pressure': 3,
+        #     'temperature, light': 7,
+        #     'humidity, pressure': 4,
+        #     'humidity, light': 0.3333333333333333,
+        #     'pressure, light': 2,
         # }
 
-        # This
+        if ahp_object != None and ahp_object != '':
+            ahpObj = json.loads(ahp_object)
+        else:
+            ahpDoc = db['ahp'].find_one()
+            ahpObj = ahpDoc['ahp']
+
+        ahp_criteria = calculateAHPOrder(ahpObj)
+        # print(criteria_comparisons)
 
         ROOMS_OBJECT = {}
 
         where_clause = {}
 
-        search_room = request.args.get("search_room")
+        search_room = request.form.get("search_room")
 
-        min_temperature = request.args.get("min_temperature")
-        max_temperature = request.args.get("max_temperature")
+        min_temperature = request.form.get("min_temperature")
+        max_temperature = request.form.get("max_temperature")
 
-        min_humidity = request.args.get("min_humidity")
-        max_humidity = request.args.get("max_humidity")
+        min_humidity = request.form.get("min_humidity")
+        max_humidity = request.form.get("max_humidity")
 
-        min_light = request.args.get("min_light")
-        max_light = request.args.get("max_light")
+        min_light = request.form.get("min_light")
+        max_light = request.form.get("max_light")
 
-        min_pressure = request.args.get("min_pressure")
-        max_pressure = request.args.get("max_pressure")
+        min_pressure = request.form.get("min_pressure")
+        max_pressure = request.form.get("max_pressure")
         if search_room != None:
             where_clause['room.room_name'] = search_room
 
@@ -107,14 +118,16 @@ class ROOMS(Resource):
                 {"$group": {"_id": "$room.room_name", "doc": {"$first": "$$ROOT"}}},
                 {"$replaceRoot": {"newRoot": "$doc"}},
             ])
+        all_rooms = sort_rooms(all_rooms, ahp_criteria)
+
         ROOMS_OBJECT = json.loads(dumps(all_rooms, default=str))
         return ROOMS_OBJECT
 
 
 class ROOM(Resource):
     def get(self, room_name):
-        current_time = datetime.datetime.utcnow()
-        past_time = current_time - datetime.timedelta(hours=24)
+        current_time = datetime.utcnow()
+        past_time = current_time - timedelta(hours=24)
         past_time = past_time.strftime('%Y-%m-%d %H:%M:%S')
         current_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -128,7 +141,7 @@ class ROOM(Resource):
             # Group the documents by 3 hour intervals
             data = {}
             for doc in room:
-                time = datetime.datetime.strptime(
+                time = datetime.strptime(
                     doc['room']['time'], '%Y-%m-%d %H:%M:%S')
                 interval = (time.hour // 3) * 3
                 if interval not in data:
@@ -160,8 +173,8 @@ class ROOM(Resource):
 @ app.route('/rooms/average_values')
 def averageValues():
 
-    current_time = datetime.datetime.utcnow()
-    past_time = current_time - datetime.timedelta(hours=24)
+    current_time = datetime.utcnow()
+    past_time = current_time - timedelta(hours=24)
     past_time = past_time.strftime('%Y-%m-%d %H:%M:%S')
     current_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -173,7 +186,7 @@ def averageValues():
     # Group the documents by 3 hour intervals
     data = {}
     for doc in documents:
-        time = datetime.datetime.strptime(
+        time = datetime.strptime(
             doc['room']['time'], '%Y-%m-%d %H:%M:%S')
         interval = (time.hour // 3) * 3
         if interval not in data:
@@ -203,17 +216,41 @@ def averageValues():
 
 class AHPImportance(Resource):
     def get(self):
-        print('some code')
-        # @TODO Need to create a table for AHP importance in DB
-        # It should basically store this object:
-        # AHPObj: {
-        # 'temperature, humidity': 0.2,
-        # 'temperature', pressure': 3,
+
+        ahpDoc = db['ahp'].find_one()
+        return ahpDoc['ahp']
+
+    def put(self):
+        ahp_object = request.form.get('ahp_object')
+
+        # example:
+        # ahpObj = {
+        #     'temperature, humidity': 0.2,
+        #     'temperature, pressure': 3,
+        #     'temperature, light': 7,
+        #     'humidity, pressure': 4,
+        #     'humidity, light': 0.3333333333333333,
+        #     'pressure, light': 2,
         # }
 
-    def put(self, updatedAHPObj):
-        print('some code')
-        # @TODO updatedImportance is also an object - same type as AHPObj
+        try:
+            if ahp_object != None and ahp_object != '':
+                ahpObj = json.loads(ahp_object)
+                db['ahp'].update_one({}, {"$set": ahpObj})
+                message = f"Successfuly updated ahp object"
+                code = 200
+                status = "successful"
+            else:
+                message = f"{ex}"
+                code = 401
+                status = "Invalid parameters"
+
+        except Exception as ex:
+            message = f"{ex}"
+            code = 500
+            status = "fail"
+
+        return jsonify({'status': status, "message": message})
 
 
 @app.route('/test')
@@ -271,42 +308,152 @@ def login():
         status = "fail"
     return jsonify({"data": res_data, 'status': status, "message": message})
 
-
-def calculateAHPOrder(AHPObj):
-    # AHPObj format same as above
-    # @TODO: AHPObj needs to be converted to the following format (object key: tuples, value: float):
-    # {
-    #   ('Temperature', 'Humidity'): 0.2,
-    # ('Temperature', 'Pressure'): 3,
-    # ('Temperature', 'Light'): 7,
-    # ('Humidity', 'Pressure'): 4,
-    # ('Humidity', 'Light'): 0.3333333333333333,
-    # ('Pressure', 'Light'): 2
+    # AHPObj: {
+    # 'temperature, humidity': 0.2,
+    # 'temperature', pressure': 3,
     # }
 
-    rooms = ['room_106', 'room_108', 'room_215', 'room_104']
-    room_pairs = list(combinations(rooms, 2))
+
+def sort_rooms(data, values):
+    sorted_data = sorted(data, key=lambda x: values.get(
+        x['room']['room_name']), reverse=True)
+    return sorted_data
+
+
+def calculateAHPOrder(AHPObj):
+
+    # serialize the ahp object to the required format by ahp library
+    criteria_comparisons = {
+        tuple(key.title().split(', ')): value for key, value in AHPObj.items()}
+    # new format:
+    #  {
+    #        ('Temperature', 'Humidity'): 0.2,
+    #        ('Temperature', 'Pressure'): 3,
+    # }
+
+    room_names = ['room_106', 'room_108', 'room_215', 'room_111']
+    room_pairs = list(combinations(room_names, 2))
     # room_pairs returns:
     # [('room_106', 'room_108'),
     # ('room_106', 'room_215'),
-    # ('room_106', 'room_104'),
+    # ('room_106', 'room_111'),
     # ('room_108', 'room_215'),
-    # ('room_108', 'room_104'),
-    # ('room_215', 'room_104')]
+    # ('room_108', 'room_111'),
+    # ('room_215', 'room_111')]
 
-    # These are dummy data, and they represent importance for each pair:
-    # ('room_106', 'room_108'): 1/5
-    # ('room_106', 'room_215'): 3
-    # ...
-    temperature_values = [1/5, 3, 7, 4, 1/3, 2]
-    humidity_values = [1/3, 4, 8, 1, 1/2, 3]
-    pressure_values = [1/5, 7, 7, 2, 1/3, 2]
-    light_values = [1/5, 3, 6, 4, 1/3, 5]
+    # Get average parameter value (temp, humidity, pressure...) for each room in the last 24h
+    past_24_hours = datetime.utcnow() - timedelta(hours=24)
+    past_24_hours = past_24_hours.strftime('%Y-%m-%d %H:%M:%S')
+    pipeline = [
+        {"$match": {"room.time": {"$gte": past_24_hours}}},
+        {"$group": {"_id": "$room.room_name",
+                    "temperature": {"$avg": "$room.temperature"},
+                    "humidity": {"$avg": "$room.humidity"},
+                    "light": {"$avg": "$room.light"},
+                    "pressure": {"$avg": "$room.pressure"}
+                    }
+         }
+    ]
 
-    # So how do we calculate them?
+    averages = {}
+    for doc in rooms.aggregate(pipeline):
+        averages[doc['_id']] = {
+            "temperature": float(doc["temperature"]),
+            "humidity": float(doc["humidity"]),
+            "light": float(doc["light"]),
+            "pressure": float(doc["pressure"])
+        }
+    # averages returns (example):
+    # {
+    #   "room_205": {
+    #              "temperature": 24.3,
+    #              "humidity" : 12,
+    #              "light": 3,
+    #              "pressure": 4
+    #     },
+    # }
+
+    print(criteria_comparisons)
+
     # 1. Get average parameter value (temp, humidity, pressure...) for each room in the last 24h
     # 2. Divide values for pairs by each other.
     # So if temp is 5 for room_106 and 25 for room_108, ('room_106', 'room_108') will be 1/5 (5/25) - 0.2
+    temperature_values = [
+        averages['room_106']['temperature'] /
+        averages['room_108']['temperature'],
+
+        averages['room_106']['temperature'] /
+        averages['room_215']['temperature'],
+
+        averages['room_106']['temperature'] /
+        averages['room_111']['temperature'],
+
+        averages['room_108']['temperature'] /
+        averages['room_215']['temperature'],
+
+        averages['room_108']['temperature'] /
+        averages['room_111']['temperature'],
+
+        averages['room_215']['temperature'] /
+        averages['room_111']['temperature'],
+    ]
+    humidity_values = [
+        averages['room_106']['humidity'] /
+        averages['room_108']['humidity'],
+
+        averages['room_106']['humidity'] /
+        averages['room_215']['humidity'],
+
+        averages['room_106']['humidity'] /
+        averages['room_111']['humidity'],
+
+        averages['room_108']['humidity'] /
+        averages['room_215']['humidity'],
+
+        averages['room_108']['humidity'] /
+        averages['room_111']['humidity'],
+
+        averages['room_215']['humidity'] /
+        averages['room_111']['humidity'],
+    ]
+    pressure_values = [
+        averages['room_106']['light'] /
+        averages['room_108']['light'],
+
+        averages['room_106']['light'] /
+        averages['room_215']['light'],
+
+        averages['room_106']['light'] /
+        averages['room_111']['light'],
+
+        averages['room_108']['light'] /
+        averages['room_215']['light'],
+
+        averages['room_108']['light'] /
+        averages['room_111']['light'],
+
+        averages['room_215']['light'] /
+        averages['room_111']['light'],
+    ]
+    light_values = [
+        averages['room_106']['pressure'] /
+        averages['room_108']['pressure'],
+
+        averages['room_106']['pressure'] /
+        averages['room_215']['pressure'],
+
+        averages['room_106']['pressure'] /
+        averages['room_111']['pressure'],
+
+        averages['room_108']['pressure'] /
+        averages['room_215']['pressure'],
+
+        averages['room_108']['pressure'] /
+        averages['room_111']['pressure'],
+
+        averages['room_215']['pressure'] /
+        averages['room_111']['pressure'],
+    ]
 
     temperature_comparisons = dict(zip(room_pairs, temperature_values))
     humidity_comparisons = dict(zip(room_pairs, humidity_values))
@@ -325,15 +472,16 @@ def calculateAHPOrder(AHPObj):
                             precision=3, random_index='saaty')
 
     criteria.add_children([temperature, humidity, pressure, light])
-
     print(criteria.target_weights)
-    # {'room_106': 0.344, 'room_108': 0.335, 'room_104': 0.178, 'room_215': 0.144}
+    return criteria.target_weights
+    # {'room_106': 0.344, 'room_108': 0.335, 'room_111': 0.178, 'room_215': 0.144}
 
     # After getting the value of criteria.target_weights, we just need to sort rooms by value (descending):
-    # room_108, room_106, room_104, room_215 - this is the end result of the calculation
+    # room_108, room_106, room_111, room_215 - this is the end result of the calculation
 
 
 api.add_resource(ROOMS, '/rooms')
+api.add_resource(AHPImportance, '/ahpImportances')
 api.add_resource(ROOM, '/rooms/<room_name>/')
 
 
