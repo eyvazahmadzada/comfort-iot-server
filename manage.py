@@ -320,6 +320,29 @@ def sort_rooms(data, values):
     return sorted_data
 
 
+def calculateAHPTempImportance(val1, val2, min, max, best):
+    # If both are outside the comfort temperature values, prefer both equally
+    if ((val1 <= min or val1 >= max) and (val2 <= min or val2 >= max)) or val1 == val2:
+        return 1
+    else:
+        # If one of them is outside, extremely prefer the other one
+        if val1 <= min or val1 >= max:
+            return 1/9
+        elif val2 <= min or val2 >= max:
+            return 9
+        else:  # Both of them are inside comfort values
+            val1Dis = abs(20 - val1)
+            val2Dis = abs(20 - val2)
+
+            # Calculate different between how close they are to the perfect value
+            diff = val1Dis - val2Dis
+
+            if diff < 0:  # val1 is closer to 20
+                return abs(diff)+1
+            else:  # val2 is closer to 20
+                return 1/(diff+1)
+
+
 def calculateAHPOrder(AHPObj):
 
     # serialize the ahp object to the required format by ahp library
@@ -379,8 +402,8 @@ def calculateAHPOrder(AHPObj):
     # 2. Divide values for pairs by each other.
     # So if temp is 5 for room_106 and 25 for room_108, ('room_106', 'room_108') will be 1/5 (5/25) - 0.2
     temperature_values = [
-        averages['room_106']['temperature'] /
-        averages['room_108']['temperature'],
+        calculateAHPTempImportance(
+            averages['room_106']['temperature'], averages['room_108']['temperature'], 16, 24, 20),
 
         averages['room_106']['temperature'] /
         averages['room_215']['temperature'],
@@ -398,6 +421,8 @@ def calculateAHPOrder(AHPObj):
         averages['room_111']['temperature'],
     ]
     humidity_values = [
+        calculateAHPTempImportance(
+            averages['room_106']['humidity'], averages['room_108']['humidity'], 26, 34, 30),
         averages['room_106']['humidity'] /
         averages['room_108']['humidity'],
 
@@ -417,8 +442,8 @@ def calculateAHPOrder(AHPObj):
         averages['room_111']['humidity'],
     ]
     pressure_values = [
-        averages['room_106']['light'] /
-        averages['room_108']['light'],
+        calculateAHPTempImportance(
+            averages['room_106']['light'], averages['room_108']['light'], 66, 74, 70),
 
         averages['room_106']['light'] /
         averages['room_215']['light'],
@@ -436,6 +461,8 @@ def calculateAHPOrder(AHPObj):
         averages['room_111']['light'],
     ]
     light_values = [
+        calculateAHPTempImportance(
+            averages['room_106']['pressure'] / 1000, averages['room_108']['pressure'] / 1000, 90, 98, 94),
         averages['room_106']['pressure'] /
         averages['room_108']['pressure'],
 
