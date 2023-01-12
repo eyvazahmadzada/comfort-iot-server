@@ -404,82 +404,58 @@ def calculateAHPOrder(AHPObj):
     temperature_values = [
         calculateAHPTempImportance(
             averages['room_106']['temperature'], averages['room_108']['temperature'], 16, 24, 20),
-
-        averages['room_106']['temperature'] /
-        averages['room_215']['temperature'],
-
-        averages['room_106']['temperature'] /
-        averages['room_111']['temperature'],
-
-        averages['room_108']['temperature'] /
-        averages['room_215']['temperature'],
-
-        averages['room_108']['temperature'] /
-        averages['room_111']['temperature'],
-
-        averages['room_215']['temperature'] /
-        averages['room_111']['temperature'],
+        calculateAHPTempImportance(
+            averages['room_106']['temperature'], averages['room_215']['temperature'], 16, 24, 20),
+        calculateAHPTempImportance(
+            averages['room_106']['temperature'], averages['room_111']['temperature'], 16, 24, 20),
+        calculateAHPTempImportance(
+            averages['room_108']['temperature'], averages['room_215']['temperature'], 16, 24, 20),
+        calculateAHPTempImportance(
+            averages['room_108']['temperature'], averages['room_111']['temperature'], 16, 24, 20),
+        calculateAHPTempImportance(
+            averages['room_215']['temperature'], averages['room_111']['temperature'], 16, 24, 20),
     ]
     humidity_values = [
         calculateAHPTempImportance(
             averages['room_106']['humidity'], averages['room_108']['humidity'], 26, 34, 30),
-        averages['room_106']['humidity'] /
-        averages['room_108']['humidity'],
-
-        averages['room_106']['humidity'] /
-        averages['room_215']['humidity'],
-
-        averages['room_106']['humidity'] /
-        averages['room_111']['humidity'],
-
-        averages['room_108']['humidity'] /
-        averages['room_215']['humidity'],
-
-        averages['room_108']['humidity'] /
-        averages['room_111']['humidity'],
-
-        averages['room_215']['humidity'] /
-        averages['room_111']['humidity'],
+        calculateAHPTempImportance(
+            averages['room_106']['humidity'], averages['room_215']['humidity'], 26, 34, 30),
+        calculateAHPTempImportance(
+            averages['room_106']['humidity'], averages['room_111']['humidity'], 26, 34, 30),
+        calculateAHPTempImportance(
+            averages['room_108']['humidity'], averages['room_215']['humidity'], 26, 34, 30),
+        calculateAHPTempImportance(
+            averages['room_108']['humidity'], averages['room_111']['humidity'], 26, 34, 30),
+        calculateAHPTempImportance(
+            averages['room_215']['humidity'], averages['room_111']['humidity'], 26, 34, 30),
     ]
     pressure_values = [
         calculateAHPTempImportance(
             averages['room_106']['light'], averages['room_108']['light'], 66, 74, 70),
-
-        averages['room_106']['light'] /
-        averages['room_215']['light'],
-
-        averages['room_106']['light'] /
-        averages['room_111']['light'],
-
-        averages['room_108']['light'] /
-        averages['room_215']['light'],
-
-        averages['room_108']['light'] /
-        averages['room_111']['light'],
-
-        averages['room_215']['light'] /
-        averages['room_111']['light'],
+        calculateAHPTempImportance(
+            averages['room_106']['light'], averages['room_215']['light'], 66, 74, 70),
+        calculateAHPTempImportance(
+            averages['room_106']['light'], averages['room_111']['light'], 66, 74, 70),
+        calculateAHPTempImportance(
+            averages['room_108']['light'], averages['room_215']['light'], 66, 74, 70),
+        calculateAHPTempImportance(
+            averages['room_108']['light'], averages['room_111']['light'], 66, 74, 70),
+        calculateAHPTempImportance(
+            averages['room_215']['light'], averages['room_111']['light'], 66, 74, 70),
     ]
     light_values = [
         calculateAHPTempImportance(
             averages['room_106']['pressure'] / 1000, averages['room_108']['pressure'] / 1000, 90, 98, 94),
-        averages['room_106']['pressure'] /
-        averages['room_108']['pressure'],
-
-        averages['room_106']['pressure'] /
-        averages['room_215']['pressure'],
-
-        averages['room_106']['pressure'] /
-        averages['room_111']['pressure'],
-
-        averages['room_108']['pressure'] /
-        averages['room_215']['pressure'],
-
-        averages['room_108']['pressure'] /
-        averages['room_111']['pressure'],
-
-        averages['room_215']['pressure'] /
-        averages['room_111']['pressure'],
+        calculateAHPTempImportance(
+            averages['room_106']['pressure'] / 1000, averages['room_215']['pressure'] / 1000, 90, 98, 94),
+        calculateAHPTempImportance(
+            averages['room_106']['pressure'] / 1000, averages['room_111']['pressure'] / 1000, 90, 98, 94),
+        calculateAHPTempImportance(
+            averages['room_108']['pressure'] / 1000, averages['room_215']['pressure'] / 1000, 90, 98, 94),
+        calculateAHPTempImportance(
+            averages['room_108']['pressure'] / 1000, averages['room_111']['pressure'] / 1000, 90, 98, 94),
+        calculateAHPTempImportance(
+            averages['room_215']['pressure'] / 1000, averages['room_111']['pressure'] / 1000, 90, 98, 94),
     ]
 
     temperature_comparisons = dict(zip(room_pairs, temperature_values))
